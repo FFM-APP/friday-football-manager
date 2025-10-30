@@ -159,7 +159,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px;
+            padding: 12px 12px 12px 16px;
             background: #2a2a2a;
             border-radius: 6px;
             margin-bottom: 8px;
@@ -175,6 +175,7 @@
         .player-name {
             font-size: 15px;
             color: #e0e0e0;
+            margin-bottom: 2px;
         }
 
         .player-games {
@@ -187,17 +188,19 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 18px;
-            font-weight: 700;
+            font-size: 24px;
+            font-weight: 400;
+            line-height: 1;
             transition: all 0.2s;
             flex-shrink: 0;
             margin-left: 12px;
+            padding: 0;
         }
 
         .btn-remove:hover {
@@ -542,34 +545,27 @@
     </div>
 
     <script>
-        // ⚠️ CONFIGURACIÓN CRÍTICA - REEMPLAZAR CON TU URL
+        // Configuration
         const API_URL = 'https://script.google.com/macros/s/AKfycbz-9mdrcMx6I3EURWjZwtJslWnseofYevCxZteMtxoTrIWXSvRVAZrULoMlAfkl_Xl_/exec';
         const ADMIN_PASSWORD = 'admin123';
 
         let currentPlayers = [];
         let registeredPlayers = [];
-        let playerToUnregister = null; // Store player name for modal confirmation
+        let playerToUnregister = null;
 
-        // Simple and robust JSONP implementation
-        function jsonp(url, params = {}) {
+        // JSONP implementation
+        function jsonp(url, params) {
             return new Promise((resolve, reject) => {
-                // Generate unique callback name
                 const callbackName = 'jsonp_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
-                
-                // Add callback to params
                 params.callback = callbackName;
                 
-                // Build query string
                 const queryString = Object.keys(params)
-                    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+                    .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(params[key]))
                     .join('&');
                 
-                // Create full URL
-                const scriptUrl = `${url}${url.includes('?') ? '&' : '?'}${queryString}`;
+                const scriptUrl = url + (url.includes('?') ? '&' : '?') + queryString;
                 
-                // Setup global callback
                 window[callbackName] = function(data) {
-                    // Cleanup
                     delete window[callbackName];
                     if (script.parentNode) {
                         script.parentNode.removeChild(script);
@@ -577,11 +573,9 @@
                     resolve(data);
                 };
                 
-                // Create script element
                 const script = document.createElement('script');
                 script.src = scriptUrl;
                 
-                // Handle errors
                 script.onerror = function() {
                     delete window[callbackName];
                     if (script.parentNode) {
@@ -590,7 +584,6 @@
                     reject(new Error('JSONP request failed'));
                 };
                 
-                // Add timeout
                 const timeout = setTimeout(() => {
                     if (window[callbackName]) {
                         delete window[callbackName];
@@ -599,21 +592,18 @@
                         }
                         reject(new Error('Request timeout'));
                     }
-                }, 30000); // 30 seconds
+                }, 30000);
                 
-                // Cleanup timeout on success
                 const originalCallback = window[callbackName];
                 window[callbackName] = function(data) {
                     clearTimeout(timeout);
                     originalCallback(data);
                 };
                 
-                // Inject script
                 document.head.appendChild(script);
             });
         }
 
-        // Wrapper for all API calls
         async function apiCall(url, method, params) {
             try {
                 console.log('Making API call:', params.action);
@@ -626,7 +616,6 @@
             }
         }
 
-        // Initialize app
         async function init() {
             showLoading(true);
             try {
@@ -641,7 +630,6 @@
             showLoading(false);
         }
 
-        // Load all players
         async function loadPlayers() {
             try {
                 const data = await apiCall(API_URL, 'GET', { action: 'getPlayers' });
@@ -667,7 +655,6 @@
             }
         }
 
-        // Load registrations
         async function loadRegistrations() {
             try {
                 const data = await apiCall(API_URL, 'GET', { action: 'getRegistrations' });
@@ -677,15 +664,15 @@
                 document.getElementById('spotsLeft').textContent = Math.max(0, 15 - registeredPlayers.length);
                 
                 const list = document.getElementById('registeredList');
+                list.innerHTML = '';
+                
                 if (registeredPlayers.length === 0) {
                     list.innerHTML = '<div class="empty-state">No players registered yet</div>';
                 } else {
-                    list.innerHTML = '';
                     registeredPlayers.forEach(player => {
                         const item = document.createElement('div');
                         item.className = 'player-item';
                         
-                        // Create player info container
                         const infoContainer = document.createElement('div');
                         infoContainer.className = 'player-info-container';
                         
@@ -700,14 +687,13 @@
                         infoContainer.appendChild(nameSpan);
                         infoContainer.appendChild(gamesSpan);
                         
-                        // Create remove button
                         const removeBtn = document.createElement('button');
                         removeBtn.className = 'btn-remove';
-                        removeBtn.textContent = '×';
+                        removeBtn.innerHTML = '&times;';
                         removeBtn.title = 'Remove player';
-                        removeBtn.onclick = function() {
+                        removeBtn.addEventListener('click', function() {
                             showUnregisterModal(player.name);
-                        };
+                        });
                         
                         item.appendChild(infoContainer);
                         item.appendChild(removeBtn);
@@ -719,7 +705,6 @@
             }
         }
 
-        // Register player
         async function registerPlayer() {
             const playerName = document.getElementById('playerSelect').value;
             if (!playerName) {
@@ -747,20 +732,17 @@
             showLoading(false);
         }
 
-        // Show unregister confirmation modal
         function showUnregisterModal(playerName) {
             playerToUnregister = playerName;
             document.getElementById('modalPlayerName').textContent = playerName;
             document.getElementById('confirmModal').style.display = 'block';
         }
 
-        // Close modal
         function closeModal() {
             document.getElementById('confirmModal').style.display = 'none';
             playerToUnregister = null;
         }
 
-        // Confirm and execute unregistration
         async function confirmUnregister() {
             if (!playerToUnregister) return;
 
@@ -774,7 +756,7 @@
                 });
                 
                 if (data.success) {
-                    showSuccess(`${playerToUnregister} successfully unregistered`);
+                    showSuccess(playerToUnregister + ' successfully unregistered');
                     await loadRegistrations();
                 } else {
                     showError(data.message || 'Unregistration failed');
@@ -788,35 +770,6 @@
             showLoading(false);
         }
 
-        // Unregister player (kept for backward compatibility, but now unused)
-        async function unregisterPlayer() {
-            const playerName = document.getElementById('playerSelect').value;
-            if (!playerName) {
-                showError('Please select your name');
-                return;
-            }
-
-            showLoading(true);
-            try {
-                const data = await apiCall(API_URL, 'GET', {
-                    action: 'unregister',
-                    playerName: playerName
-                });
-                
-                if (data.success) {
-                    showSuccess('Successfully unregistered');
-                    await loadRegistrations();
-                } else {
-                    showError(data.message || 'Unregistration failed');
-                }
-            } catch (error) {
-                showError('Connection error. Please try again.');
-                console.error('Unregister error:', error);
-            }
-            showLoading(false);
-        }
-
-        // Verify admin password
         function verifyAdmin() {
             const password = document.getElementById('adminPassword').value;
             if (password !== ADMIN_PASSWORD) {
@@ -826,7 +779,6 @@
             return true;
         }
 
-        // Toggle team builder
         function toggleTeamBuilder() {
             if (!verifyAdmin()) return;
             
@@ -840,19 +792,18 @@
             }
         }
 
-        // Build teams automatically
         function buildTeams() {
             const grid = document.getElementById('teamsGrid');
             const numTeams = Math.min(3, Math.ceil(registeredPlayers.length / 5));
             
             grid.innerHTML = '';
             
-            const shuffled = [...registeredPlayers].sort(() => Math.random() - 0.5);
+            const shuffled = registeredPlayers.slice().sort(() => Math.random() - 0.5);
             
             for (let i = 0; i < numTeams; i++) {
                 const teamBox = document.createElement('div');
                 teamBox.className = 'team-box';
-                teamBox.innerHTML = `<div class="team-name">Team ${i + 1}</div>`;
+                teamBox.innerHTML = '<div class="team-name">Team ' + (i + 1) + '</div>';
                 
                 const teamPlayers = shuffled.slice(i * 5, (i + 1) * 5);
                 teamPlayers.forEach(player => {
@@ -866,13 +817,11 @@
             }
         }
 
-        // Save teams
         async function saveTeams() {
             if (!verifyAdmin()) return;
             showSuccess('Teams saved successfully!');
         }
 
-        // Show add player section
         function showAddPlayer() {
             if (!verifyAdmin()) return;
             
@@ -880,7 +829,6 @@
             section.style.display = section.style.display === 'none' ? 'block' : 'none';
         }
 
-        // Add new player
         async function addNewPlayer() {
             const playerName = document.getElementById('newPlayerName').value.trim();
             if (!playerName) {
@@ -909,7 +857,6 @@
             showLoading(false);
         }
 
-        // Record stats
         async function recordStats() {
             if (!verifyAdmin()) return;
             
@@ -946,7 +893,6 @@
             showLoading(false);
         }
 
-        // Load statistics
         async function loadStats() {
             try {
                 const data = await apiCall(API_URL, 'GET', { action: 'getStats' });
@@ -960,7 +906,6 @@
             }
         }
 
-        // Render leaderboard
         function renderLeaderboard(elementId, data) {
             const container = document.getElementById(elementId);
             
@@ -975,21 +920,18 @@
                 div.className = 'leaderboard-item';
                 
                 let rankClass = 'rank-other';
-                let rankText = `#${index + 1}`;
+                let rankText = '#' + (index + 1);
                 if (index === 0) { rankClass = 'rank'; rankText = '🥇'; }
                 else if (index === 1) { rankClass = 'rank rank-2'; rankText = '🥈'; }
                 else if (index === 2) { rankClass = 'rank rank-3'; rankText = '🥉'; }
                 
-                div.innerHTML = `
-                    <div class="${rankClass}">${rankText}</div>
-                    <div class="player-info">${item.player}</div>
-                    <div class="score">${item.value}</div>
-                `;
+                div.innerHTML = '<div class="' + rankClass + '">' + rankText + '</div>' +
+                               '<div class="player-info">' + item.player + '</div>' +
+                               '<div class="score">' + item.value + '</div>';
                 container.appendChild(div);
             });
         }
 
-        // Update next game date
         function updateNextGameDate() {
             const today = new Date();
             const dayOfWeek = today.getDay();
@@ -998,12 +940,11 @@
             nextFriday.setDate(today.getDate() + daysUntilFriday);
             
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const dateStr = `${months[nextFriday.getMonth()]} ${nextFriday.getDate()}`;
+            const dateStr = months[nextFriday.getMonth()] + ' ' + nextFriday.getDate();
             
             document.getElementById('nextGame').textContent = dateStr;
         }
 
-        // Helper functions
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
             const buttons = document.querySelectorAll('button');
@@ -1014,20 +955,22 @@
             const errorDiv = document.getElementById('errorMsg');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
-            setTimeout(() => errorDiv.style.display = 'none', 5000);
+            setTimeout(function() {
+                errorDiv.style.display = 'none';
+            }, 5000);
         }
 
         function showSuccess(message) {
             const successDiv = document.getElementById('successMsg');
             successDiv.textContent = message;
             successDiv.style.display = 'block';
-            setTimeout(() => successDiv.style.display = 'none', 3000);
+            setTimeout(function() {
+                successDiv.style.display = 'none';
+            }, 3000);
         }
 
-        // Initialize on load
         window.addEventListener('load', init);
 
-        // Close modal when clicking outside of it
         window.onclick = function(event) {
             const modal = document.getElementById('confirmModal');
             if (event.target === modal) {
